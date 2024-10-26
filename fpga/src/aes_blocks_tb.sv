@@ -93,3 +93,33 @@ initial begin
     else $display ("stateout = %h \n expected = %h", stateout, expected);
 end
 endmodule
+
+
+
+////////////////////////////
+// keyExpand testbench
+////////////////////////////
+
+module testbench_keyExpand  (input logic [127:0] key,
+                            output logic [127:0] roundkey);
+
+logic [3:0] round;
+keyExpand dut(key, round, roundkey);
+
+initial begin
+    expectedR0 = 16'h
+end
+
+always begin
+    clk = 1'b0; #5;
+    clk = 1'b1; #5;
+end
+
+initial begin
+    #27;
+    for (int i = 0; i <= 10; i++ ) begin
+        $display ("round = %d, roundkey = %h", round, roundKey);
+        #10;
+    end
+end
+endmodule

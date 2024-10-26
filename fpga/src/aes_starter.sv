@@ -80,7 +80,25 @@ module aes_core(input  logic         clk,
                 output logic [127:0] cyphertext);
 
     // TODO: Your code goes here
+    logic sben, sren, mcen, arken, outen;
+    logic [127:0] roundkey, sbin, srin, mcin, arkin, outmuxin;
+
+    // controller, modules
+    mux #(128) inmux(load, plaintext, outmuxin, 
+                    sbin);
+    controller myC(clk, reset, load, key,
+                    sren, sben, mcen, arken, outen, roundkey);
+    subBytes mySB( clk, sbin, sben,
+                    srin);
+    shiftRows mySR(srin, sren,
+                    mcin);
+    addRoundKey myARK(arkin, roundkey,
+                    outmuxin);
+    mux #(128) outmux(outen, 128'b0, outmuxin, cyphertext);
+
+    assign done = outen;
     
+
 endmodule
 
 /////////////////////////////////////////////
@@ -124,6 +142,20 @@ module sbox_sync(
 	end
 endmodule
 
+
+/////////////////////////////////////////////////
+// sboxmulti
+/////////////////////////////////////////////////
+module sboxWord_sync(input clk,
+                input [31:0] a,
+                output [31:0] y);
+      sbox_sync s0 (a[7:0],  clk, y[7:0]);
+      sbox_sync s1 (a[15:8], clk, y[15:8]);
+      sbox_sync s2 (a[23:16],clk, y[23:16]);
+      sbox_sync s3 (a[31:24],clk, y[31:24]);
+
+  endmodule
+
 /////////////////////////////////////////////
 // mixcolumns
 //   Even funkier action on columns
@@ -136,11 +168,11 @@ module mixColumns(input  logic [127:0] a,
                   output logic [127:0] y);
 
   always_comb begin
-    if mcen begin
-  mixcolumn mc0(a[127:96], y[127:96]);
-  mixcolumn mc1(a[95:64],  y[95:64]);
-  mixcolumn mc2(a[63:32],  y[63:32]);
-  mixcolumn mc3(a[31:0],   y[31:0]);
+    if (mcen) begin
+        mixcolumn mc0(a[127:96], y[127:96]);
+        mixcolumn mc1(a[95:64],  y[95:64]);
+        mixcolumn mc2(a[63:32],  y[63:32]);
+        mixcolumn mc3(a[31:0],   y[31:0]);
     end 
 
     else y = a;
@@ -189,4 +221,13 @@ module galoismult(input  logic [7:0] a,
     
     assign ashift = {a[6:0], 1'b0};
     assign y = a[7] ? (ashift ^ 8'b00011011) : ashift;
+endmodule
+
+
+module mux #(parameter WIDTH = 32) 
+            (input logic select,
+            input logic [WIDTH-1:0] s1, s2,
+            output logic [WIDTH-1:0] out);
+
+            assign out = select ? s2 : s1;
 endmodule
