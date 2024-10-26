@@ -118,16 +118,19 @@ endmodule
 module controller( input logic clk, reset, load, 
                    input logic[127:0] key,
                    output logic sren, sben, mcen, arken, outen,
-                   output logic roundKey);
-    
+                   output logic roundkey);
+
+    logic [127:0] prevkey;
+    logic [3:0] round;
+
     // state register
     always_ff @(posedge clk) begin
         if (reset) begin 
-            prevKey <= key;
+            prevkey <= key;
             round <= 0;
         end
         else begin
-            prevKey <= roundKey;
+            prevkey <= roundkey;
             round <= round + 1;
         end
     end
@@ -143,6 +146,6 @@ module controller( input logic clk, reset, load,
     assign outen = (round == 10);
 
     // key expansion
-    keyExpand myKE(prevKey, round, roundKey);
+    keyExpand myKE(prevkey, round, roundkey);
 
 endmodule
