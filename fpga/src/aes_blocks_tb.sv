@@ -16,12 +16,8 @@ module testbench_subBytes ();//(input logic [127:0] statein,
 logic [127:0] expected, statein, stateout;
 logic sben, clk;
 
-shiftRows dut(statein, sben, stateout);
+subBytes dut(clk, statein, sben, stateout);
 
-initial begin
-    
-    expected <= 16'h090862BF6F28E3042C747FEEDA4A6A47;
-end
 
 always begin
     clk = 1'b0; #5;
@@ -29,7 +25,10 @@ always begin
 end
 
 initial begin
-    statein = 16'h40BFABF406EE4D3042CA6B997A5C5816 ;
+    expected <= 128'h090862BF6F28E3042C747FEEDA4A6A47;
+    statein = 128'h40BFABF406EE4D3042CA6B997A5C5816 ;
+
+    sben = 0; #7;
     sben = 1'b1; #27;
     if (stateout == expected) $display ("success");
     else $display ("stateout = %h \n expected = %h", stateout, expected);
@@ -40,22 +39,21 @@ endmodule
 // shiftRows testbench
 ////////////////////////////
 
-module testbench_shiftRows  (input logic [127:0] statein,
-                            //input logic sren,
-                            output logic [127:0] stateout);
+module testbench_shiftRows ();
 
 
 // from NIST example
 // state in = 090862BF 6F28E304 2C747FEE DA4A6A47
 // expected out = 09287F47 6F746ABF 2C4A6204 DA08E3EE
 logic clk, sren;
-logic [127:0] expected;
+logic [127:0] expected, statein, stateout;
 
 shiftRows dut(statein, sren, stateout);
 
 
 initial begin
-    expected <= 16'h09287F476F746ABF2C4A6204DA08E3EE;
+    statein <= 128'h090862BF6F28E3042C747FEEDA4A6A47;
+    expected <= 128'h09287F476F746ABF2C4A6204DA08E3EE;
 end
 
 always begin
@@ -64,6 +62,7 @@ always begin
 end
 
 initial begin
+    sren = 0; #11;
     sren = 1; #27;
     if (stateout == expected) $display ("success");
     else $display ("stateout = %h \n expected = %h", stateout, expected);
@@ -89,7 +88,7 @@ logic clk;
 logic [127:0] expected;
 
 initial begin
-    expected <= 16'h40BFABF406EE4D3042CA6B997A5C5816;
+    expected <= 128'h40BFABF406EE4D3042CA6B997A5C5816;
 end
 
 always begin

@@ -145,8 +145,9 @@ endmodule
 /////////////////////////////////////////////////
 // sboxWord_sync
 /////////////////////////////////////////////////
-module sboxWord_sync(input clk,
+module sboxWord_sync(
                 input [31:0] a,
+                input clk,
                 output [31:0] y);
       sbox_sync s0 (a[7:0],  clk, y[7:0]);
       sbox_sync s1 (a[15:8], clk, y[15:8]);
