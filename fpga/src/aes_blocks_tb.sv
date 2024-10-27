@@ -4,18 +4,22 @@
 // subBytes testbench
 ////////////////////////////
 
-module testbench_subBytes (input logic [127:0] statein,
-                            input logic sben,
-                            output logic [127:0] stateout);
+module testbench_subBytes ();//(input logic [127:0] statein,
+                            //input logic sben,
+                            //output logic [127:0] stateout);
 
 
 // from NIST example
 // state in = 40BFABF4 06EE4D30 42CA6B99 7A5C5816 
 // expected out = 090862BF 6F28E304 2C747FEE DA4A6A47
 
-shiftRows dut(statein, sren, stateout);
+logic [127:0] expected, statein, stateout;
+logic sben, clk;
+
+shiftRows dut(statein, sben, stateout);
 
 initial begin
+    
     expected <= 16'h090862BF6F28E3042C747FEEDA4A6A47;
 end
 
@@ -25,7 +29,8 @@ always begin
 end
 
 initial begin
-    sben = 1; #27;
+    statein = 16'h40BFABF406EE4D3042CA6B997A5C5816 ;
+    sben = 1'b1; #27;
     if (stateout == expected) $display ("success");
     else $display ("stateout = %h \n expected = %h", stateout, expected);
 end
@@ -36,15 +41,18 @@ endmodule
 ////////////////////////////
 
 module testbench_shiftRows  (input logic [127:0] statein,
-                            input logic sren,
+                            //input logic sren,
                             output logic [127:0] stateout);
 
 
 // from NIST example
 // state in = 090862BF 6F28E304 2C747FEE DA4A6A47
 // expected out = 09287F47 6F746ABF 2C4A6204 DA08E3EE
+logic clk, sren;
+logic [127:0] expected;
 
 shiftRows dut(statein, sren, stateout);
+
 
 initial begin
     expected <= 16'h09287F476F746ABF2C4A6204DA08E3EE;
@@ -77,6 +85,8 @@ module testbench_addRoundKey  (input logic [127:0] statein,
 // expected out = 40BFABF4 06EE4D30 42CA6B99 7A5C5816
 
 addRoundKey dut(statein, roundkey, stateout);
+logic clk;
+logic [127:0] expected;
 
 initial begin
     expected <= 16'h40BFABF406EE4D3042CA6B997A5C5816;
@@ -102,12 +112,14 @@ endmodule
 
 module testbench_keyExpand  (input logic [127:0] key,
                             output logic [127:0] roundkey);
-
+logic clk;
 logic [3:0] round;
-keyExpand dut(key, round, roundkey);
+logic [127:0] expected;
+
+keyExpand dut(clk, key, round, roundkey);
 
 initial begin
-    expectedR0 = 16'h
+    //find expected key expansion for each round? check indiv?
 end
 
 always begin
@@ -117,8 +129,8 @@ end
 
 initial begin
     #27;
-    for (int i = 0; i <= 10; i++ ) begin
-        $display ("round = %d, roundkey = %h", round, roundKey);
+    for (int round = 0; round <= 10; round++ ) begin
+        $display ("round = %d, roundkey = %h", round, roundkey);
         #10;
     end
 end

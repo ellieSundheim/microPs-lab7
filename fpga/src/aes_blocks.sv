@@ -10,17 +10,14 @@ module subBytes (input logic clk,
     logic [31:0] w0, w1, w2, w3;
     logic [31:0] w0p, w1p, w2p, w3p;
 
-    {w0, w1, w2, w3} = statein;
+    assign {w0, w1, w2, w3} = statein  ;
+	sboxWord_sync sw0(w0, clk, w0p);
+    sboxWord_sync sw1(w1, clk, w0p);
+	sboxWord_sync sw2(w2, clk, w0p);
+	sboxWord_sync sw3(w3, clk, w0p);
 
     always_comb begin
-        if (sben) begin
-            sboxWord_sync sw0(w0, clk, w0p);
-            sboxWord_sync sw1(w1, clk, w0p);
-            sboxWord_sync sw2(w2, clk, w0p);
-            sboxWord_sync sw3(w3, clk, w0p);
-
-            stateout = {w0p, w1p, w2p, w3p};
-        end
+        if (sben) stateout = {w0p, w1p, w2p, w3p};
         else stateout = statein;
     end
     endmodule
@@ -34,7 +31,7 @@ module shiftRows   (input logic [127:0] statein,
                     input logic sren,
                     output logic [127:0] stateout);
     logic [7:0] s00, s01, s02, s03, s10, s11, s12, s13, s20, s21, s22, s23, s30, s31, s32, s33;
-    {s00, s01, s02, s03, s10, s11, s12, s13, s20, s21, s22, s23, s30, s31, s32, s33} = statein;
+    assign {s00, s01, s02, s03, s10, s11, s12, s13, s20, s21, s22, s23, s30, s31, s32, s33} = statein;
 
     always_comb begin
         if (sren) begin
@@ -60,7 +57,7 @@ module addRoundKey
     logic [31:0] w1p, w2p, w3p, w4p;
     logic [31:0] rk1, rk2, rk3, rk4;
 
-    {w1, w2, w3, w4} = statein;
+    assign {w1, w2, w3, w4} = statein;
 
     always_comb begin
         w1p = w1 ^ rk1;
@@ -76,13 +73,16 @@ endmodule
 ////////////////////////////
 // keyexpansion
 ////////////////////////////
-module keyExpand(input logic [127:0] prevkey,
+module keyExpand(input logic clk,
+				input logic [127:0] prevkey,
                 input logic [3:0] round,
-                output logic [127:0] roundKey);
+                output logic [127:0] roundkey);
 
-        logic[31:0] w0, w1, w2, w3, rotWord, subWord, Rcon;
+        logic[31:0] w0, w1, w2, w3, w4, w5, w6, w7, rotWord, subWord, Rcon;
 
-        {w0,w1,w2,w3} = prevkey;
+        assign {w0,w1,w2,w3} = prevkey;
+		assign rotWord = {w1,w2,w3,w0};
+		sboxWord_sync mySBM(rotWord, subWord);
 
         // every subsequent word is generated recursively from the preceding word w[i-1] and the word Nk = 4 positions earlier w[i-4]
         // Nk = 4 (just a constant)
@@ -96,8 +96,8 @@ module keyExpand(input logic [127:0] prevkey,
                 else if (round == 10) Rcon = 8'h36000000;
 
                 // calculate mod 4 word
-                rotWord = {w1,w2,w3,w0};
-                sboxWord mySBM(rotWord, subWord);
+                // above, do rotWord
+                // subWord(rotWord) gets done by sync module outside the always comb but we use it here
                 w4 = w0 ^ subWord ^ Rcon;
 
                 // calculate all the in between words
@@ -106,7 +106,7 @@ module keyExpand(input logic [127:0] prevkey,
                 w7 = w3 ^ w6;
 
                 // smush them back into a round key
-                roundkey = {w5, w6, w7, w8};
+                roundkey = {w4, w5, w6, w7};
             end
         end
 
@@ -140,7 +140,7 @@ module controller( input logic clk, reset, load,
 
     // output logic
     assign sben = ((round > 0) && (round <= 10));
-    assign sben = ((round > 0) && (round <= 10));
+    assign sren = ((round > 0) && (round <= 10));
     assign mcen = ((round > 0) && (round < 10));
     assign arken = 1;
     assign outen = (round == 10);
