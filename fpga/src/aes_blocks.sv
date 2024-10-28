@@ -56,15 +56,15 @@ endmodule
 // module addRoundKey
 /////////////////////////////
 
-module addRoundKey
-                    (input logic [127:0] statein,
+module addRoundKey(input logic [127:0] statein,
                     input logic [127:0] roundkey,
-                    output logic [128:0] stateout );
+                    output logic [127:0] stateout );
     logic [31:0] w1, w2, w3, w4;
     logic [31:0] w1p, w2p, w3p, w4p;
     logic [31:0] rk1, rk2, rk3, rk4;
 
     assign {w1, w2, w3, w4} = statein;
+    assign {rk1, rk2, rk3, rk4} = roundkey;
 
     always_comb begin
         w1p = w1 ^ rk1;
@@ -85,11 +85,14 @@ module keyExpand(input logic clk,
                 input logic [3:0] round,
                 output logic [127:0] roundkey);
 
-        logic[31:0] w0, w1, w2, w3, w4, w5, w6, w7, rotWord, subWord, Rcon;
+        logic[31:0] w0, w1, w2, w3, w4, w5, w6, w7, Rcon, rotWord, subWord;
 
         assign {w0,w1,w2,w3} = prevkey;
-		assign rotWord = {w1,w2,w3,w0};
-		sboxWord_sync mySBM(rotWord, subWord);
+        // rotWord([a0, a1, a2,a3]) = [a1, a2, a3, a0]
+		assign rotWord = {w3[23:16], w3[15:8], w3[7:0], w3[31:24]};
+
+		sboxWord_sync mySBM0(rotWord, clk, subWord);
+        
 
         // every subsequent word is generated recursively from the preceding word w[i-1] and the word Nk = 4 positions earlier w[i-4]
         // Nk = 4 (just a constant)
@@ -98,9 +101,10 @@ module keyExpand(input logic clk,
             if (round == 0) roundkey = prevkey;
             else begin
                 // determine Rcon[j]
-                if (round <= 8) Rcon = {1'b1 << (round-1), 6'h000000};
-                else if (round == 9) Rcon = 8'h1b000000;
-                else if (round == 10) Rcon = 8'h36000000;
+                if (round <= 8) Rcon = {16'b1 << (round-1), 24'h000000};
+                else if (round == 9) Rcon = 32'h1b000000;
+                else if (round == 10) Rcon = 32'h36000000;
+                
 
                 // calculate mod 4 word
                 // above, do rotWord

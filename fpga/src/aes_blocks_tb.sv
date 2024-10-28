@@ -26,7 +26,7 @@ end
 
 initial begin
     expected <= 128'h090862BF6F28E3042C747FEEDA4A6A47;
-    statein = 128'h40BFABF406EE4D3042CA6B997A5C5816 ;
+    statein <= 128'h40BFABF406EE4D3042CA6B997A5C5816 ;
 
     sben = 0; #7;
     sben = 1'b1; #27;
@@ -73,23 +73,18 @@ endmodule
 // addRoundKey testbench
 ////////////////////////////
 
-module testbench_addRoundKey  (input logic [127:0] statein,
-                            input logic [127:0] roundkey,
-                            output logic [127:0] stateout);
+module testbench_addRoundKey  ();
 
 
-// from NIST example
-// state in =  6BC1BEE2 2E409F96 E93D7E11 7393172A
-// roundkey = 
-// expected out = 40BFABF4 06EE4D30 42CA6B99 7A5C5816
+// from appendix B.1
+// state in =  32 43 f6 a8 88 5a 30 8d 31 31 98 a2 e0 37 07 34
+// roundkey = 2b 7e 15 16 28 ae d2 a6 ab f7 15 88 09 cf 4f 3c
+// expected out = 19 3d e3 be a0 f4 e2 2b 9a c6 8d 2a e9 f8 48 08
+
+logic clk;
+logic [127:0] statein, roundkey, stateout, expected;
 
 addRoundKey dut(statein, roundkey, stateout);
-logic clk;
-logic [127:0] expected;
-
-initial begin
-    expected <= 128'h40BFABF406EE4D3042CA6B997A5C5816;
-end
 
 always begin
     clk = 1'b0; #5;
@@ -97,6 +92,9 @@ always begin
 end
 
 initial begin
+    statein <= 128'h3243f6a8885a308d313198a2e0370734;
+    roundkey <= 128'h2b7e151628aed2a6abf7158809cf4f3c;
+    expected <= 128'h193de3bea0f4e22b9ac68d2ae9f84808;
     #27;
     if (stateout == expected) $display ("success");
     else $display ("stateout = %h \n expected = %h", stateout, expected);
@@ -109,13 +107,13 @@ endmodule
 // keyExpand testbench
 ////////////////////////////
 
-module testbench_keyExpand  (input logic [127:0] key,
-                            output logic [127:0] roundkey);
+module testbench_keyExpand  ();
+
 logic clk;
 logic [3:0] round;
-logic [127:0] expected;
+logic [127:0] expected, prevkey, roundkey;
 
-keyExpand dut(clk, key, round, roundkey);
+keyExpand dut(clk, prevkey, round, roundkey);
 
 initial begin
     //find expected key expansion for each round? check indiv?
@@ -128,9 +126,17 @@ end
 
 initial begin
     #27;
-    for (int round = 0; round <= 10; round++ ) begin
-        $display ("round = %d, roundkey = %h", round, roundkey);
-        #10;
+    round = 0;
+    prevkey = 128'h2b7e151628aed2a6abf7158809cf4f3c;
+    $display ("round = 0, roundkey = %h", prevkey);
+    #17;
+    
+    for (int i = 1; i <= 10; i++ ) begin
+        round = i;
+        #17;
+        $display ("round = %d, roundkey = %h", i, roundkey);
+        prevkey = roundkey;
+        
     end
 end
 endmodule
