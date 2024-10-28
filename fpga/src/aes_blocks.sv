@@ -133,20 +133,46 @@ module controller( input logic clk, reset, load,
 
     logic [127:0] prevkey;
     logic [3:0] round;
+    logic [4:0] state;
+    logic [1:0] counter;
+
+    typedef enum statetype{idle, r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, complete} ;
+    statetype state, nextstate;
 
     // state register
     always_ff @(posedge clk) begin
         if (reset) begin 
+            counter <= 0;
             prevkey <= key;
+            state <= idle;
             round <= 0;
         end
         else begin
+            counter <= counter + 1;
+            state <= nextstate;
+            
+        end
+        if (counter == 3) begin
             prevkey <= roundkey;
             round <= round + 1;
         end
     end
 
     // next state logic (handled in flop logic)
+    case (state)
+        idle: if (load) nextstate = r0; else nextstate = state;
+        r0: if (counter == 3) nextstate = r1; else nextstate = state;
+        r1: if (counter == 3) nextstate = r2; else nextstate = state;
+        r2: if (counter == 3) nextstate = r3; else nextstate = state;
+        r3: if (counter == 3) nextstate = r4; else nextstate = state;
+        r4: if (counter == 3) nextstate = r5; else nextstate = state;
+        r5: if (counter == 3) nextstate = r6; else nextstate = state;
+        r6: if (counter == 3) nextstate = r7; else nextstate = state;
+        r7: if (counter == 3) nextstate = r8; else nextstate = state;
+        r8: if (counter == 3) nextstate = r9; else nextstate = state;
+        r9: if (counter == 3) nextstate = r10; else nextstate = state;
+        r10: if (counter == 3) nextstate = complete; else nextstate = state;
+        complete:  nextstate = state;
 
 
     // output logic
