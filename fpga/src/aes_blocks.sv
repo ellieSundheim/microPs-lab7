@@ -129,14 +129,16 @@ endmodule
 module controller( input logic clk, reset, load, 
                    input logic[127:0] key,
                    output logic sren, sben, mcen, arken, outen,
-                   output logic roundkey);
+                   output logic[127:0] roundkey);
 
     logic [127:0] prevkey;
     logic [3:0] round;
-    logic [4:0] state;
     logic [1:0] counter;
 
-    typedef enum statetype{idle, r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, complete} ;
+    // key expansion
+    keyExpand myKE(clk, prevkey, round, roundkey);
+
+    typedef enum {idle, r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, complete, error} statetype;
     statetype state, nextstate;
 
     // state register
@@ -145,7 +147,7 @@ module controller( input logic clk, reset, load,
             counter <= 0;
             prevkey <= key;
             state <= idle;
-            round <= 0;
+            round <= -1;
         end
         else begin
             counter <= counter + 1;
@@ -159,6 +161,7 @@ module controller( input logic clk, reset, load,
     end
 
     // next state logic (handled in flop logic)
+    always_comb begin
     case (state)
         idle: if (load) nextstate = r0; else nextstate = state;
         r0: if (counter == 3) nextstate = r1; else nextstate = state;
@@ -173,16 +176,19 @@ module controller( input logic clk, reset, load,
         r9: if (counter == 3) nextstate = r10; else nextstate = state;
         r10: if (counter == 3) nextstate = complete; else nextstate = state;
         complete:  nextstate = state;
+        error: nextstate = error;
+        default: nextstate = error;
+        endcase
+    end
 
 
     // output logic
     assign sben = ((round > 0) && (round <= 10));
     assign sren = ((round > 0) && (round <= 10));
     assign mcen = ((round > 0) && (round < 10));
-    assign arken = 1;
+    assign arken = (round > 0);
     assign outen = (round == 10);
 
-    // key expansion
-    keyExpand myKE(prevkey, round, roundkey);
+    
 
 endmodule

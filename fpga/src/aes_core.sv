@@ -219,7 +219,7 @@ module mixColumns(input  logic [127:0] a,
 
   always_comb begin
     if (mcen)  	y = temp; //always do the mixing but if we don't want it then we write over it
-	else 		y = a;
+	  else 		y = a;
     
   end
 endmodule
