@@ -152,7 +152,7 @@ module controller( input logic clk, load,
             round <= -1;
         end
         else begin
-            state <= nextstate;
+            state <= nextstate;                           
             if (state != nextstate) begin //end of round
                 counter <= 0;
                 prevkey <= roundkey;
