@@ -3,7 +3,7 @@
 //   Top level module with SPI interface and SPI core
 /////////////////////////////////////////////
 
-module aes(input  logic clk,
+module aes(//input  logic clk,
            input  logic sck, 
            input  logic sdi,
            output logic sdo,
@@ -11,10 +11,27 @@ module aes(input  logic clk,
            output logic done);
                     
     logic [127:0] key, plaintext, cyphertext;
+
+    oscillator myOsc(clk);
             
     aes_spi spi(sck, sdi, sdo, done, key, plaintext, cyphertext);   
     aes_core core(clk, load, key, plaintext, done, cyphertext);
 endmodule
+
+// internal oscillator
+module oscillator(output logic clk);
+
+	logic int_osc;
+  
+	// Internal high-speed oscillator (div 2'b01 makes it oscillate at 24Mhz)
+	HSOSC #(.CLKHF_DIV(2'b01)) 
+         hf_osc (.CLKHFPU(1'b1), .CLKHFEN(1'b1), .CLKHF(int_osc));
+
+    assign clk = int_osc;
+  
+endmodule
+
+
 
 /////////////////////////////////////////////
 // aes_spi

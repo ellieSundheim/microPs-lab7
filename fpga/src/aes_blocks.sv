@@ -104,6 +104,7 @@ module keyExpand(input logic clk,
                 if (round <= 8) Rcon = {16'b1 << (round-1), 24'h000000};
                 else if (round == 9) Rcon = 32'h1b000000;
                 else if (round == 10) Rcon = 32'h36000000;
+                else Rcon = 32'h0; //won't ever happen, but I don't want a latch
                 
 
                 // calculate mod 4 word
@@ -152,7 +153,7 @@ module controller( input logic clk, load,
         end
         else begin
             state <= nextstate;
-            if (state != nextstate) begin 
+            if (state != nextstate) begin //end of round
                 counter <= 0;
                 prevkey <= roundkey;
                 round <= round + 1;
