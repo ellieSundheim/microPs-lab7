@@ -129,7 +129,8 @@ endmodule
 module controller( input logic clk, load, 
                    input logic[127:0] key,
                    output logic inen, sren, sben, mcen, arken, outen,
-                   output logic[127:0] roundkey);
+                   output logic[127:0] roundkey,
+                   output logic done);
 
     logic [127:0] prevkey;
     logic [3:0] round;
@@ -190,7 +191,8 @@ module controller( input logic clk, load,
     assign sren = ((round > 0) && (round <= 10));
     assign mcen = ((round > 0) && (round < 10));
     assign arken = (round > -1);
-    assign outen = (state == complete);
+    assign outen = (counter == 3);
+    assign done = (state == complete);
 
     
 

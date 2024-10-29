@@ -84,10 +84,10 @@ module aes_core(input  logic         clk,
     logic [127:0] roundkey, sbin, srin, mcin, arkin, outmuxin;
 
     // controller, modules
-    mux2 #(128) inmux(inen, plaintext, outmuxin, 
+    mux2 #(128) inmux(inen, plaintext, cyphertext, 
                     sbin);
     controller myC(clk, load, key,
-                    inen, sren, sben, mcen, arken, outen, roundkey);
+                    inen, sren, sben, mcen, arken, outen, roundkey, done);
     subBytes mySB( clk, sbin, sben,
                     srin);
     shiftRows mySR(srin, sren,
@@ -96,9 +96,8 @@ module aes_core(input  logic         clk,
                     arkin);
     addRoundKey myARK(arkin, roundkey,
                     outmuxin);
-    mux2 #(128) outmux(outen, 128'b0, outmuxin, cyphertext);
-
-    assign done = outen;
+    //mux2 #(128) outmux(outen, 128'b0, outmuxin, cyphertext);
+    flopenr #(128) outFlop(clk, outen, load, outmuxin, cyphertext);
     
 
 endmodule
@@ -234,4 +233,16 @@ module mux2 #(parameter WIDTH = 32)
 
     assign out = select ? s2 : s1;
 
+endmodule
+
+
+module flopenr #(parameter WIDTH = 32)
+                (input logic clk, en, reset,
+                input logic [WIDTH-1:0] q,
+                output logic [WIDTH-1:0] d);
+
+always_ff @(posedge clk) begin
+  if (reset) d <= 0;
+  else if (en) d <= q;
+end
 endmodule
