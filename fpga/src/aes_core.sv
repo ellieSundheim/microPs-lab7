@@ -3,7 +3,7 @@
 //   Top level module with SPI interface and SPI core
 /////////////////////////////////////////////
 
-module aes(input  logic clk,
+module aes(//input  logic clk,
            input  logic sck, 
            input  logic sdi,
            output logic sdo,
@@ -11,10 +11,27 @@ module aes(input  logic clk,
            output logic done);
                     
     logic [127:0] key, plaintext, cyphertext;
+
+    oscillator myOsc(clk);
             
     aes_spi spi(sck, sdi, sdo, done, key, plaintext, cyphertext);   
     aes_core core(clk, load, key, plaintext, done, cyphertext);
 endmodule
+
+// internal oscillator
+module oscillator(output logic clk);
+
+	logic int_osc;
+  
+	// Internal high-speed oscillator (div 2'b01 makes it oscillate at 24Mhz)
+	HSOSC #(.CLKHF_DIV(2'b01)) 
+         hf_osc (.CLKHFPU(1'b1), .CLKHFEN(1'b1), .CLKHF(int_osc));
+
+    assign clk = int_osc;
+  
+endmodule
+
+
 
 /////////////////////////////////////////////
 // aes_spi
@@ -80,7 +97,26 @@ module aes_core(input  logic         clk,
                 output logic [127:0] cyphertext);
 
     // TODO: Your code goes here
+    logic inen, sben, sren, mcen, arken, outen;
+    logic [127:0] roundkey, sbin, srin, mcin, arkin, outmuxin;
+
+    // controller, modules
+    mux2 #(128) inmux(inen, plaintext, cyphertext, 
+                    sbin);
+    controller myC(clk, load, key,
+                    inen, sren, sben, mcen, arken, outen, roundkey, done);
+    subBytes mySB( clk, sbin, sben,
+                    srin);
+    shiftRows mySR(srin, sren,
+                    mcin);
+    mixColumns myMC(mcin, mcen, 
+                    arkin);
+    addRoundKey myARK(arkin, roundkey,
+                    outmuxin);
+    //mux2 #(128) outmux(outen, 128'b0, outmuxin, cyphertext);
+    flopenr #(128) outFlop(clk, outen, load, outmuxin, cyphertext);
     
+
 endmodule
 
 /////////////////////////////////////////////
@@ -124,20 +160,34 @@ module sbox_sync(
 	end
 endmodule
 
-/////////////////////////////////////////////
-// mixcolumns
-//   Even funkier action on columns
-//   Section 5.1.3, Figure 9
-//   Same operation performed on each of four columns
+/////////////////////////////////////////////////
+// sboxWord_sync
+/////////////////////////////////////////////////
+module sboxWord_sync(
+                input [31:0] a,
+                input clk,
+                output [31:0] y);
+      sbox_sync s0 (a[7:0],  clk, y[7:0]);
+      sbox_sync s1 (a[15:8], clk, y[15:8]);
+      sbox_sync s2 (a[23:16],clk, y[23:16]);
+      sbox_sync s3 (a[31:24],clk, y[31:24]);
+
+  endmodule
+  
+  /////////////////////////////////////////////
+// galoismult
+//   Multiply by x in GF(2^8) is a left shift
+//   followed by an XOR if the result overflows
+//   Uses irreducible polynomial x^8+x^4+x^3+x+1 = 00011011
 /////////////////////////////////////////////
 
-module mixcolumns(input  logic [127:0] a,
-                  output logic [127:0] y);
+module galoismult(input  logic [7:0] a,
+                  output logic [7:0] y);
 
-  mixcolumn mc0(a[127:96], y[127:96]);
-  mixcolumn mc1(a[95:64],  y[95:64]);
-  mixcolumn mc2(a[63:32],  y[63:32]);
-  mixcolumn mc3(a[31:0],   y[31:0]);
+    logic [7:0] ashift;
+    
+    assign ashift = {a[6:0], 1'b0};
+    assign y = a[7] ? (ashift ^ 8'b00011011) : ashift;
 endmodule
 
 /////////////////////////////////////////////
@@ -168,17 +218,48 @@ module mixcolumn(input  logic [31:0] a,
 endmodule
 
 /////////////////////////////////////////////
-// galoismult
-//   Multiply by x in GF(2^8) is a left shift
-//   followed by an XOR if the result overflows
-//   Uses irreducible polynomial x^8+x^4+x^3+x+1 = 00011011
+// mixcolumns
+//   Even funkier action on columns
+//   Section 5.1.3, Figure 9
+//   Same operation performed on each of four columns
 /////////////////////////////////////////////
 
-module galoismult(input  logic [7:0] a,
-                  output logic [7:0] y);
+module mixColumns(input  logic [127:0] a,
+                  input logic mcen,
+                  output logic [127:0] y);
 
-    logic [7:0] ashift;
+	logic [127:0] temp;
+
+	mixcolumn mc0(a[127:96], temp[127:96]);
+	mixcolumn mc1(a[95:64],  temp[95:64]);
+	mixcolumn mc2(a[63:32],  temp[63:32]);
+	mixcolumn mc3(a[31:0],   temp[31:0]);
+
+  always_comb begin
+    if (mcen)  	y = temp; //always do the mixing but if we don't want it then we write over it
+	  else 		y = a;
     
-    assign ashift = {a[6:0], 1'b0};
-    assign y = a[7] ? (ashift ^ 8'b00011011) : ashift;
+  end
+endmodule
+
+
+module mux2 #(parameter WIDTH = 32)
+            (input logic select,
+            input logic [WIDTH-1:0] s1, s2,
+            output logic [WIDTH-1:0] out);
+
+    assign out = select ? s2 : s1;
+
+endmodule
+
+
+module flopenr #(parameter WIDTH = 32)
+                (input logic clk, en, reset,
+                input logic [WIDTH-1:0] q,
+                output logic [WIDTH-1:0] d);
+
+always_ff @(posedge clk) begin
+  if (reset) d <= 0;
+  else if (en) d <= q;
+end
 endmodule
