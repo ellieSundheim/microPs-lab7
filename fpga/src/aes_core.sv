@@ -80,18 +80,20 @@ module aes_core(input  logic         clk,
                 output logic [127:0] cyphertext);
 
     // TODO: Your code goes here
-    logic sben, sren, mcen, arken, outen;
+    logic inen, sben, sren, mcen, arken, outen;
     logic [127:0] roundkey, sbin, srin, mcin, arkin, outmuxin;
 
     // controller, modules
-    mux2 #(128) inmux(load, plaintext, outmuxin, 
+    mux2 #(128) inmux(inen, plaintext, outmuxin, 
                     sbin);
-    controller myC(clk, reset, load, key,
-                    sren, sben, mcen, arken, outen, roundkey);
+    controller myC(clk, load, key,
+                    inen, sren, sben, mcen, arken, outen, roundkey);
     subBytes mySB( clk, sbin, sben,
                     srin);
     shiftRows mySR(srin, sren,
                     mcin);
+    mixColumns myMC(mcin, mcen, 
+                    arkin);
     addRoundKey myARK(arkin, roundkey,
                     outmuxin);
     mux2 #(128) outmux(outen, 128'b0, outmuxin, cyphertext);

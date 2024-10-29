@@ -98,7 +98,7 @@ module keyExpand(input logic clk,
         // Nk = 4 (just a constant)
         // for round 0, i just use the key
         always_comb begin
-            if (round == 0) roundkey = prevkey;
+            if ((round == 4'b1111) | (round == 4'b0000)) roundkey = prevkey;
             else begin
                 // determine Rcon[j]
                 if (round <= 8) Rcon = {16'b1 << (round-1), 24'h000000};
@@ -126,9 +126,9 @@ endmodule
 ///////////////////////////////////
 // controller
 //////////////////////////////////
-module controller( input logic clk, reset, load, 
+module controller( input logic clk, load, 
                    input logic[127:0] key,
-                   output logic sren, sben, mcen, arken, outen,
+                   output logic inen, sren, sben, mcen, arken, outen,
                    output logic[127:0] roundkey);
 
     logic [127:0] prevkey;
@@ -143,27 +143,29 @@ module controller( input logic clk, reset, load,
 
     // state register
     always_ff @(posedge clk) begin
-        if (reset) begin 
+        if (load) begin 
             counter <= 0;
             prevkey <= key;
             state <= idle;
             round <= -1;
         end
         else begin
-            counter <= counter + 1;
             state <= nextstate;
+            if (state != nextstate) begin 
+                counter <= 0;
+                prevkey <= roundkey;
+                round <= round + 1;
+            end
+            else counter <= counter + 1;
             
         end
-        if (counter == 3) begin
-            prevkey <= roundkey;
-            round <= round + 1;
-        end
+
     end
 
     // next state logic (handled in flop logic)
     always_comb begin
     case (state)
-        idle: if (load) nextstate = r0; else nextstate = state;
+        idle: if (!load) nextstate = r0; else nextstate = state;
         r0: if (counter == 3) nextstate = r1; else nextstate = state;
         r1: if (counter == 3) nextstate = r2; else nextstate = state;
         r2: if (counter == 3) nextstate = r3; else nextstate = state;
@@ -183,11 +185,12 @@ module controller( input logic clk, reset, load,
 
 
     // output logic
+    assign inen = (round > 0);
     assign sben = ((round > 0) && (round <= 10));
     assign sren = ((round > 0) && (round <= 10));
     assign mcen = ((round > 0) && (round < 10));
-    assign arken = (round > 0);
-    assign outen = (round == 10);
+    assign arken = (round > -1);
+    assign outen = (state == complete);
 
     
 

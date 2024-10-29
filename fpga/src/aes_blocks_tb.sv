@@ -151,9 +151,7 @@ logic clk, reset, load;
 logic[127:0] key, roundkey;
 logic sren, sben, mcen, arken, outen;
 
-controller mycontr (clk, reset, load, key, sren, sben, mcen, arken, outen,roundkey);
-
-
+controller mycontr (clk, load, key, inen, sren, sben, mcen, arken, outen, roundkey);
 
 always begin
     clk = 1'b0; #5;
@@ -162,8 +160,8 @@ end
 
 initial begin
     key <= 128'h2b7e151628aed2a6abf7158809cf4f3c;
-    reset = 0; #7; reset = 1; #7; reset = 0;
-    load = 0; #7; load = 1;
-    #150;
+   // reset = 0; #7; reset = 1; #17; reset = 0; #12;
+    load = 0; #17; load = 1;
+    #1500;
 end
 endmodule
